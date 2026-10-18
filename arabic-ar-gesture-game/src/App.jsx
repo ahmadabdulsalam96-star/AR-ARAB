@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, Clock3, Hand, Heart, Home, Play, RotateCcw, Star, Trophy, Volume2, VolumeX } from 'lucide-react';
-
+import MatchAndWin from './MatchAndWin.jsx';
 // Arabic Gesture Quest 2.0 — Word Catcher, Years 1–6.
 // Works with the existing Vite/React project and the MediaPipe scripts in index.html.
 const BANK = {
