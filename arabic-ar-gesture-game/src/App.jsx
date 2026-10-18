@@ -69,6 +69,7 @@ function speak(text) {
   window.speechSynthesis.speak(utterance);
 }
 export default function App() {
+  const [gameMode, setGameMode] = useState('word');
   const [year, setYear] = useState(1);
   const [stage, setStage] = useState('menu');
   const [index, setIndex] = useState(0);
@@ -179,7 +180,10 @@ export default function App() {
 
   const returnHome = () => { setStage('menu'); setCursor(null); setHandVisible(false); };
   return (
-    <div className="min-h-screen bg-slate-950 text-white" dir="ltr">
+   gameMode === 'match' && stage === 'playing' ? (
+      <MatchAndWin year={year} onBack={returnHome} />
+    ) : (
+  <div className="min-h-screen bg-slate-950 text-white" dir="ltr">
       <header className="border-b border-slate-800 bg-slate-900/90 px-4 py-4">
         <div className="mx-auto max-w-7xl flex flex-wrap justify-between items-center gap-3">
           <div><h1 className="text-xl sm:text-2xl font-extrabold text-amber-300">عَالَمُ الْعَرَبِيَّةِ AR 2.0</h1><p className="text-slate-400 text-sm">Arabic Gesture Quest · صَيْدُ الْكَلِمَاتِ · Word Catcher</p></div>
@@ -187,7 +191,34 @@ export default function App() {
         </div>
       </header>
       {stage === 'menu' && <main className="max-w-5xl mx-auto px-4 py-10 text-center">
-        <div className="text-6xl mb-4">🎮 🤏 📚</div><h2 className="text-3xl font-black mb-3">Word Catcher — Tangkap Perkataan</h2>
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+  <button
+    onClick={() => setGameMode('word')}
+    className={`rounded-2xl border-2 p-5 font-bold ${
+      gameMode === 'word'
+        ? 'bg-amber-500 text-slate-950 border-amber-300'
+        : 'bg-slate-900 text-white border-slate-700'
+    }`}
+  >
+    <span className="block text-4xl mb-2">🎯</span>
+    Word Catcher
+    <span className="block text-sm font-normal">صيد الكلمات</span>
+  </button>
+
+  <button
+    onClick={() => setGameMode('match')}
+    className={`rounded-2xl border-2 p-5 font-bold ${
+      gameMode === 'match'
+        ? 'bg-emerald-400 text-slate-950 border-emerald-200'
+        : 'bg-slate-900 text-white border-slate-700'
+    }`}
+  >
+    <span className="block text-4xl mb-2">🧩</span>
+    Match & Win
+    <span className="block text-sm font-normal">طابق واربح</span>
+  </button>
+</div>
+ <div className="text-6xl mb-4">🎮 🤏 📚</div><h2 className="text-3xl font-black mb-3">Word Catcher — Tangkap Perkataan</h2>
         <p className="text-slate-300 mb-8">Baca maksud atau lihat gambar. Gerakkan jari telunjuk ke jawapan Arab yang betul, kemudian cubit ibu jari dan telunjuk untuk memilih.</p>
         <h3 className="text-lg font-bold mb-4">Pilih tahun persekolahan</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
@@ -229,5 +260,6 @@ export default function App() {
       {stage === 'done' && <main className="max-w-xl mx-auto text-center p-8 mt-12 rounded-3xl bg-slate-900 border border-slate-700"><Trophy size={72} className="mx-auto text-amber-400 mb-4"/><h2 className="text-3xl font-black mb-2">Tahniah! 🎉</h2><p className="text-slate-300">Word Catcher Tahun {year} tamat.</p><p className="text-5xl font-black text-emerald-400 my-6">{score} <span className="text-xl">mata</span></p><div className="flex flex-wrap justify-center gap-3"><button onClick={begin} className="bg-emerald-400 text-slate-950 font-bold rounded-xl px-5 py-3 flex items-center gap-2"><RotateCcw size={18}/> Main semula</button><button onClick={returnHome} className="bg-slate-700 rounded-xl px-5 py-3">Pilih tahun lain</button></div></main>}
       <footer className="text-center text-slate-500 text-xs p-6">Arabic Gesture Quest AR 2.0 · Word Catcher · Prototype PdPc</footer>
     </div>
+    )
   );
 }
