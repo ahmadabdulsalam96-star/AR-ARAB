@@ -1,391 +1,233 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Trophy, Sparkles, RefreshCw, Volume2, VolumeX, Camera, 
-  CheckCircle2, Award, Play, AlertCircle
-} from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, CheckCircle2, Clock3, Hand, Heart, Home, Play, RotateCcw, Star, Trophy, Volume2, VolumeX } from 'lucide-react';
 
-const GAME_LEVELS = [
-  { id: 1, letter: 'أ', name: 'ألف', word: 'أَسَد', emoji: '🦁', gestureName: 'كف مفتوح (✋)', gestureKey: 'OPEN_PALM' },
-  { id: 2, letter: 'ب', name: 'باء', word: 'بَطَّة', emoji: '🦆', gestureName: 'علامة النصر (✌️)', gestureKey: 'PEACE' },
-  { id: 3, letter: 'ت', name: 'تاء', word: 'تُفَّاحَة', emoji: '🍎', gestureName: 'قبضة يد (✊)', gestureKey: 'FIST' },
-  { id: 4, letter: 'ج', name: 'جمل', word: 'جَمَل', emoji: '🐪', gestureName: 'إبهام لأعلى (👍)', gestureKey: 'THUMBS_UP' },
-  { id: 5, letter: 'س', name: 'سين', word: 'سَمَكَة', emoji: '🐟', gestureName: 'قرص الأصابع (🤌)', gestureKey: 'PINCH' },
-];
-
+// Arabic Gesture Quest 2.0 — Word Catcher, Years 1–6.
+// Works with the existing Vite/React project and the MediaPipe scripts in index.html.
+const BANK = {
+  1: [
+    ['🍎', 'Epal', 'تُفَّاحَة', ['مَوْز', 'قَلَم', 'بَاب']],
+    ['🦁', 'Singa', 'أَسَد', ['قِطّ', 'بَقَرَة', 'جَمَل']],
+    ['📖', 'Buku', 'كِتَاب', ['كُرْسِيّ', 'بَيْت', 'قَلَم']],
+    ['🐟', 'Ikan', 'سَمَكَة', ['أَسَد', 'بَطَّة', 'حِصَان']],
+    ['🚪', 'Pintu', 'بَاب', ['كِتَاب', 'مَاء', 'وَرْدَة']],
+    ['✏️', 'Pensel', 'قَلَم', ['مِمْحَاة', 'حَقِيبَة', 'مَكْتَب']]
+  ],
+  2: [
+    ['🔴', 'Merah', 'أَحْمَر', ['أَزْرَق', 'أَخْضَر', 'أَصْفَر']],
+    ['☀️', 'Matahari', 'شَمْس', ['قَمَر', 'نَجْم', 'مَطَر']],
+    ['🚌', 'Bas', 'حَافِلَة', ['سَيَّارَة', 'دَرَّاجَة', 'قِطَار']],
+    ['🥛', 'Susu', 'حَلِيب', ['مَاء', 'عَصِير', 'خُبْز']],
+    ['👟', 'Kasut', 'حِذَاء', ['قَمِيص', 'سِرْوَال', 'قُبَّعَة']],
+    ['🏫', 'Sekolah', 'مَدْرَسَة', ['مَسْجِد', 'مَكْتَبَة', 'سُوق']]
+  ],
+  3: [
+    ['📚', 'Membaca', 'يَقْرَأُ', ['يَكْتُبُ', 'يَشْرَبُ', 'يَنَامُ']],
+    ['✍️', 'Menulis', 'يَكْتُبُ', ['يَلْعَبُ', 'يَأْكُلُ', 'يَجْلِسُ']],
+    ['💧', 'Minum', 'يَشْرَبُ', ['يَجْرِي', 'يَقْرَأُ', 'يَفْتَحُ']],
+    ['😴', 'Tidur', 'يَنَامُ', ['يَسْمَعُ', 'يَكْتُبُ', 'يَقُومُ']],
+    ['⚽', 'Bermain', 'يَلْعَبُ', ['يَأْكُلُ', 'يَذْهَبُ', 'يَغْسِلُ']],
+    ['🍽️', 'Makan', 'يَأْكُلُ', ['يَشْرَبُ', 'يَكْتُبُ', 'يَقْرَأُ']]
+  ],
+  4: [
+    ['👦📖', 'Budak lelaki sedang membaca', 'الْوَلَدُ يَقْرَأُ', ['الْوَلَدُ يَنَامُ', 'الْبِنْتُ تَكْتُبُ', 'الْوَلَدُ يَجْرِي']],
+    ['👧✍️', 'Budak perempuan sedang menulis', 'الْبِنْتُ تَكْتُبُ', ['الْبِنْتُ تَلْعَبُ', 'الْوَلَدُ يَكْتُبُ', 'الْبِنْتُ تَنَامُ']],
+    ['🏠', 'Rumah itu besar', 'الْبَيْتُ كَبِيرٌ', ['الْبَيْتُ صَغِيرٌ', 'الْبَابُ مَفْتُوحٌ', 'الْقَلَمُ جَدِيدٌ']],
+    ['📚', 'Buku itu baharu', 'الْكِتَابُ جَدِيدٌ', ['الْكِتَابُ قَدِيمٌ', 'الْقَلَمُ جَدِيدٌ', 'الْبَيْتُ جَمِيلٌ']],
+    ['👨‍🏫', 'Guru itu berdiri', 'الْمُعَلِّمُ وَاقِفٌ', ['الْمُعَلِّمُ جَالِسٌ', 'الطَّالِبُ وَاقِفٌ', 'الْمُعَلِّمُ نَائِمٌ']],
+    ['🌷', 'Bunga itu cantik', 'الزَّهْرَةُ جَمِيلَةٌ', ['الزَّهْرَةُ صَغِيرَةٌ', 'الْحَدِيقَةُ كَبِيرَةٌ', 'الشَّجَرَةُ طَوِيلَةٌ']]
+  ],
+  5: [
+    ['🏫', 'Ahmad pergi ke sekolah', 'يَذْهَبُ أَحْمَدُ إِلَى الْمَدْرَسَةِ', ['يَذْهَبُ أَحْمَدُ إِلَى السُّوقِ', 'تَذْهَبُ فَاطِمَةُ إِلَى الْمَدْرَسَةِ', 'يَرْجِعُ أَحْمَدُ مِنَ الْمَدْرَسَةِ']],
+    ['🥛', 'Fatimah minum susu', 'تَشْرَبُ فَاطِمَةُ الْحَلِيبَ', ['تَأْكُلُ فَاطِمَةُ الْخُبْزَ', 'يَشْرَبُ أَحْمَدُ الْمَاءَ', 'تَشْرَبُ فَاطِمَةُ الْمَاءَ']],
+    ['📖', 'Ali membaca buku di kelas', 'يَقْرَأُ عَلِيٌّ الْكِتَابَ فِي الْفَصْلِ', ['يَكْتُبُ عَلِيٌّ فِي الْفَصْلِ', 'يَقْرَأُ عَلِيٌّ فِي الْبَيْتِ', 'يَفْتَحُ عَلِيٌّ الْبَابَ']],
+    ['🌳', 'Kanak-kanak bermain di taman', 'يَلْعَبُ الْأَطْفَالُ فِي الْحَدِيقَةِ', ['يَدْرُسُ الْأَطْفَالُ فِي الْفَصْلِ', 'يَلْعَبُ الْأَطْفَالُ فِي الْبَيْتِ', 'يَنَامُ الْأَطْفَالُ فِي الْغُرْفَةِ']],
+    ['🕌', 'Ayah bersolat di masjid', 'يُصَلِّي الْأَبُ فِي الْمَسْجِدِ', ['يُصَلِّي الْأَبُ فِي الْبَيْتِ', 'يَقْرَأُ الْأَبُ فِي الْمَسْجِدِ', 'يَذْهَبُ الْأَبُ إِلَى السُّوقِ']],
+    ['🍚', 'Ibu memasak makanan di dapur', 'تَطْبُخُ الْأُمُّ الطَّعَامَ فِي الْمَطْبَخِ', ['تَأْكُلُ الْأُمُّ الطَّعَامَ', 'تَطْبُخُ الْبِنْتُ فِي الْمَطْبَخِ', 'تَغْسِلُ الْأُمُّ الْمَلَابِسَ']]
+  ],
+  6: [
+    ['📚', 'Pilih ayat: Para murid sedang membaca buku di perpustakaan', 'يَقْرَأُ التَّلَامِيذُ الْكُتُبَ فِي الْمَكْتَبَةِ', ['يَكْتُبُ التَّلَامِيذُ فِي الْفَصْلِ', 'يَقْرَأُ الْمُعَلِّمُ الْكِتَابَ', 'يَلْعَبُ التَّلَامِيذُ فِي الْمَلْعَبِ']],
+    ['🏫', 'Pilih ayat: Guru perempuan menerangkan pelajaran kepada murid-murid', 'تَشْرَحُ الْمُعَلِّمَةُ الدَّرْسَ لِلتَّلَامِيذِ', ['يَشْرَحُ الْمُعَلِّمُ الدَّرْسَ', 'تَكْتُبُ الْمُعَلِّمَةُ الْوَاجِبَ', 'يَسْمَعُ التَّلَامِيذُ الدَّرْسَ']],
+    ['🕌', 'Pilih ayat: Kami menunaikan solat berjemaah di masjid', 'نُصَلِّي جَمَاعَةً فِي الْمَسْجِدِ', ['نَقْرَأُ الْقُرْآنَ فِي الْفَصْلِ', 'أُصَلِّي فِي الْبَيْتِ', 'يُصَلِّي الْإِمَامُ وَحْدَهُ']],
+    ['🚌', 'Pilih ayat: Kami pergi ke sekolah dengan bas pada waktu pagi', 'نَذْهَبُ إِلَى الْمَدْرَسَةِ بِالْحَافِلَةِ صَبَاحًا', ['نَذْهَبُ إِلَى السُّوقِ بِالسَّيَّارَةِ', 'نَرْجِعُ مِنَ الْمَدْرَسَةِ مَسَاءً', 'أَذْهَبُ إِلَى الْمَدْرَسَةِ مَشْيًا']],
+    ['✍️', 'Pilih ayat: Ahmad menulis kerja sekolah selepas makan', 'يَكْتُبُ أَحْمَدُ الْوَاجِبَ بَعْدَ الطَّعَامِ', ['يَكْتُبُ أَحْمَدُ قَبْلَ الطَّعَامِ', 'يَقْرَأُ أَحْمَدُ الْكِتَابَ بَعْدَ الصَّلَاةِ', 'تَكْتُبُ فَاطِمَةُ الْوَاجِبَ']],
+    ['🌅', 'Pilih ayat: Saya bangun awal untuk menunaikan solat Subuh', 'أَسْتَيْقِظُ مُبَكِّرًا لِأُصَلِّيَ الصُّبْحَ', ['أَنَامُ مُبَكِّرًا بَعْدَ الصُّبْحِ', 'أَذْهَبُ إِلَى الْمَدْرَسَةِ مَسَاءً', 'أَلْعَبُ بَعْدَ صَلَاةِ الْعِشَاءِ']]
+  ]
+};
+const LIMIT = {1:90, 2:80, 3:70, 4:60, 5:55, 6:50};
+const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const arrange = (entry, seed) => {
+  const values = [entry[2], ...entry[3].slice(0, seed < 3 ? (seed === 1 ? 1 : 2) : 3)];
+  // Rotate rather than shuffle randomly to make each question's positions reproducible.
+  const offset = seed % values.length;
+  return [...values.slice(offset), ...values.slice(0, offset)];
+};
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ar-SA'; utterance.rate = 0.78;
+  window.speechSynthesis.speak(utterance);
+}
 export default function App() {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
+  const [year, setYear] = useState(1);
+  const [stage, setStage] = useState('menu');
+  const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [detectedGesture, setDetectedGesture] = useState('جاري التعرف...');
-  const [matchSuccess, setMatchSuccess] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
+  const [lives, setLives] = useState(3);
+  const [seconds, setSeconds] = useState(LIMIT[1]);
+  const [selected, setSelected] = useState(null);
+  const [sound, setSound] = useState(true);
+  const [cameraMessage, setCameraMessage] = useState('Memulakan kamera...');
+  const [handVisible, setHandVisible] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const [hint, setHint] = useState(false);
+  const videoRef = useRef(null), canvasRef = useRef(null), arenaRef = useRef(null);
+  const optionsRef = useRef([]), selectionRef = useRef(null), pinchedRef = useRef(false), lastPickRef = useRef(0);
+  const bank = BANK[year];
+  const item = bank[Math.min(index, bank.length - 1)];
+  const choices = useMemo(() => arrange(item, index + year), [item, index, year]);
+  const playing = stage === 'playing';
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const particlesRef = useRef([]);
-
-  const currentLevel = GAME_LEVELS[currentLevelIdx];
-
-  const playSound = (type) => {
-    if (!soundEnabled) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (type === 'success') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-      } else if (type === 'level') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      }
-    } catch (e) {
-      console.log('Audio playback error:', e);
-    }
+  const begin = () => {
+    setIndex(0); setScore(0); setLives(3); setSeconds(LIMIT[year]);
+    setSelected(null); setHint(false); setStage('playing');
   };
+  const pick = (choice) => {
+    if (selectionRef.current !== null || !choice) return;
+    const correct = choice === item[2];
+    selectionRef.current = choice;
+    setSelected({ choice, correct });
+    if (correct) {
+      setScore(s => s + 100 + Math.min(50, Math.floor(seconds / 2)));
+      if (sound) speak(item[2]);
+    } else setLives(l => Math.max(0, l - 1));
+  };
+  useEffect(() => { selectionRef.current = null; setSelected(null); setHint(false); pinchedRef.current = false; }, [index, year, stage]);
+  useEffect(() => {
+    if (!playing || !selected) return;
+    const t = setTimeout(() => {
+      if (index === bank.length - 1 || (selected && !selected.correct && lives <= 0)) setStage('done');
+      else { setIndex(i => i + 1); setSeconds(LIMIT[year]); }
+    }, 1250);
+    return () => clearTimeout(t);
+  }, [selected, playing, index, bank.length, lives, year]);
+  useEffect(() => {
+    if (!playing || selected) return;
+    const timer = setInterval(() => setSeconds(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [playing, selected, index]);
+  useEffect(() => {
+    if (playing && seconds === 0 && !selected) pick('__TIMEOUT__');
+  }, [seconds, playing, selected]);
 
   useEffect(() => {
-    if (!gameStarted) return;
-
-    let camera = null;
-    let hands = null;
-
-    if (window.Hands && videoRef.current) {
-      hands = new window.Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-      });
-
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.6,
-        minTrackingConfidence: 0.6
-      });
-
-      hands.onResults(onHandResults);
-
-      if (window.Camera && videoRef.current) {
-        camera = new window.Camera(videoRef.current, {
-          onFrame: async () => {
-            if (videoRef.current && hands) {
-              await hands.send({ image: videoRef.current });
+    if (!playing) return;
+    let camera, hands, cancelled = false;
+    const setup = async () => {
+      if (!window.Hands || !window.Camera || !videoRef.current) {
+        setCameraMessage('MediaPipe belum dimuatkan. Muat semula halaman.'); return;
+      }
+      try {
+        hands = new window.Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+        hands.setOptions({maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.65, minTrackingConfidence: 0.6});
+        hands.onResults(results => {
+          if (cancelled) return;
+          const landmarks = results.multiHandLandmarks?.[0];
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          if (!landmarks) { setHandVisible(false); setCursor(null); pinchedRef.current = false; return; }
+          setHandVisible(true); setCameraMessage('Tangan dikesan');
+          ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3;
+          for (const [a,b] of CONNECTIONS) {
+            ctx.beginPath(); ctx.moveTo(landmarks[a].x * canvas.width, landmarks[a].y * canvas.height);
+            ctx.lineTo(landmarks[b].x * canvas.width, landmarks[b].y * canvas.height); ctx.stroke();
+          }
+          const tip = landmarks[8], thumb = landmarks[4];
+          const x = (1 - tip.x) * 100, y = tip.y * 100;
+          const distance = Math.hypot(tip.x - thumb.x, tip.y - thumb.y);
+          const pinch = distance < 0.065;
+          setCursor({x, y, pinch});
+          if (pinch && !pinchedRef.current && Date.now() - lastPickRef.current > 700 && selectionRef.current === null) {
+            const arena = arenaRef.current;
+            if (arena) {
+              const rect = arena.getBoundingClientRect();
+              const px = rect.left + (x / 100) * rect.width;
+              const py = rect.top + (y / 100) * rect.height;
+              const chosen = optionsRef.current.find(el => {
+                if (!el) return false;
+                const r = el.getBoundingClientRect();
+                return px >= r.left && px <= r.right && py >= r.top && py <= r.bottom;
+              });
+              if (chosen) { lastPickRef.current = Date.now(); chosen.click(); }
             }
-          },
-          width: 640,
-          height: 480
+          }
+          pinchedRef.current = pinch;
         });
-        camera.start();
-        setCameraActive(true);
-      }
-    }
-
-    return () => {
-      if (camera) camera.stop();
-      if (hands) hands.close();
-      setCameraActive(false);
+        camera = new window.Camera(videoRef.current, {
+          onFrame: async () => { if (!cancelled && hands && videoRef.current) await hands.send({image: videoRef.current}); },
+          width: 640, height: 480
+        });
+        await camera.start();
+        if (!cancelled) setCameraMessage('Kamera aktif — halakan tangan ke kamera');
+      } catch (err) { if (!cancelled) setCameraMessage('Kamera/MediaPipe gagal: ' + (err?.message || 'ralat tidak diketahui')); }
     };
-  }, [gameStarted, currentLevelIdx]);
+    setup();
+    return () => { cancelled = true; camera?.stop(); Promise.resolve(hands?.close()).catch(() => {}); };
+  }, [playing]);
 
-  const onHandResults = (results) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      const landmarks = results.multiHandLandmarks[0];
-
-      drawHandSkeleton(ctx, landmarks, canvas.width, canvas.height);
-
-      const gesture = analyzeGesture(landmarks);
-      setDetectedGesture(gesture.nameArabic);
-
-      if (gesture.key === currentLevel.gestureKey && !matchSuccess) {
-        handleMatchSuccess(landmarks, canvas.width, canvas.height);
-      }
-    } else {
-      setDetectedGesture('لم يتم اكتشاف يد');
-    }
-
-    updateAndDrawParticles(ctx);
-    ctx.restore();
-  };
-
-  const analyzeGesture = (lm) => {
-    const thumbTip = lm[4], indexTip = lm[8];
-
-    const isFingerUp = (tipIdx, pipIdx) => lm[tipIdx].y < lm[pipIdx].y;
-
-    const indexUp = isFingerUp(8, 6);
-    const middleUp = isFingerUp(12, 10);
-    const ringUp = isFingerUp(16, 14);
-    const pinkyUp = isFingerUp(20, 18);
-    const thumbUp = lm[4].y < lm[3].y && lm[4].y < lm[2].y;
-
-    const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
-
-    if (pinchDist < 0.08) {
-      return { key: 'PINCH', nameArabic: 'قرص الأصابع (🤌)' };
-    } else if (indexUp && middleUp && !ringUp && !pinkyUp) {
-      return { key: 'PEACE', nameArabic: 'علامة النصر (✌️)' };
-    } else if (thumbUp && !indexUp && !middleUp && !ringUp && !pinkyUp) {
-      return { key: 'THUMBS_UP', nameArabic: 'إبهام لأعلى (👍)' };
-    } else if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
-      return { key: 'FIST', nameArabic: 'قبضة يد (✊)' };
-    } else if (indexUp && middleUp && ringUp && pinkyUp) {
-      return { key: 'OPEN_PALM', nameArabic: 'كف مفتوح (✋)' };
-    }
-
-    return { key: 'UNKNOWN', nameArabic: 'تحرك كف يدك بوضوح' };
-  };
-
-  const handleMatchSuccess = (landmarks, width, height) => {
-    setMatchSuccess(true);
-    playSound('success');
-    setScore((prev) => prev + 100);
-    setStreak((prev) => prev + 1);
-
-    const palmX = landmarks[9].x * width;
-    const palmY = landmarks[9].y * height;
-    
-    for (let i = 0; i < 40; i++) {
-      particlesRef.current.push({
-        x: palmX,
-        y: palmY,
-        vx: (Math.random() - 0.5) * 12,
-        vy: (Math.random() - 0.5) * 12,
-        color: ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'][Math.floor(Math.random() * 5)],
-        radius: Math.random() * 6 + 3,
-        life: 1.0
-      });
-    }
-
-    setTimeout(() => {
-      setMatchSuccess(false);
-      setCurrentLevelIdx((prev) => (prev + 1) % GAME_LEVELS.length);
-      playSound('level');
-    }, 1800);
-  };
-
-  const drawHandSkeleton = (ctx, landmarks, width, height) => {
-    const CONNECTIONS = [
-      [0,1],[1,2],[2,3],[3,4],
-      [0,5],[5,6],[6,7],[7,8],
-      [5,9],[9,10],[10,11],[11,12],
-      [9,13],[13,14],[14,15],[15,16],
-      [13,17],[17,18],[18,19],[19,20],[0,17]
-    ];
-
-    ctx.strokeStyle = '#00F0FF';
-    ctx.lineWidth = 4;
-    ctx.shadowColor = '#00F0FF';
-    ctx.shadowBlur = 10;
-
-    CONNECTIONS.forEach(([i, j]) => {
-      const p1 = landmarks[i];
-      const p2 = landmarks[j];
-      ctx.beginPath();
-      ctx.moveTo(p1.x * width, p1.y * height);
-      ctx.lineTo(p2.x * width, p2.y * height);
-      ctx.stroke();
-    });
-
-    landmarks.forEach((pt, index) => {
-      ctx.beginPath();
-      ctx.arc(pt.x * width, pt.y * height, index === 8 || index === 4 ? 8 : 5, 0, 2 * Math.PI);
-      ctx.fillStyle = index === 8 || index === 4 ? '#FF007A' : '#FFFFFF';
-      ctx.fill();
-    });
-    ctx.shadowBlur = 0;
-  };
-
-  const updateAndDrawParticles = (ctx) => {
-    particlesRef.current = particlesRef.current.filter(p => p.life > 0);
-    particlesRef.current.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 0.02;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(0, p.radius * p.life), 0, 2 * Math.PI);
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = p.life;
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-    });
-  };
-
+  const returnHome = () => { setStage('menu'); setCursor(null); setHandVisible(false); };
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans" dir="rtl">
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3 space-x-reverse">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <Sparkles className="w-6 h-6 text-slate-950" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                عالم العربية بالواقع المعزز (AR)
-              </h1>
-              <p className="text-xs text-slate-400">Arabic AR Gesture Quest</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-              title={soundEnabled ? 'كتم الصوت' : 'تشغيل الصوت'}
-            >
-              {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5 text-rose-400" />}
-            </button>
-            <button
-              onClick={() => {
-                setScore(0);
-                setStreak(0);
-                setCurrentLevelIdx(0);
-              }}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-2 text-xs font-medium"
-            >
-              <RefreshCw className="w-4 h-4" /> إعادة اللعب
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-950 text-white" dir="ltr">
+      <header className="border-b border-slate-800 bg-slate-900/90 px-4 py-4">
+        <div className="mx-auto max-w-7xl flex flex-wrap justify-between items-center gap-3">
+          <div><h1 className="text-xl sm:text-2xl font-extrabold text-amber-300">عَالَمُ الْعَرَبِيَّةِ AR 2.0</h1><p className="text-slate-400 text-sm">Arabic Gesture Quest · صَيْدُ الْكَلِمَاتِ · Word Catcher</p></div>
+          <button onClick={returnHome} className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 flex gap-2 items-center"><Home size={18}/> Menu utama</button>
         </div>
       </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 flex flex-col gap-4">
-            <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl aspect-video flex items-center justify-center">
-              <video
-                ref={videoRef}
-                className="absolute inset-0 w-full h-full object-cover transform -scale-x-100"
-                playsInline
-                muted
-              />
-              <canvas
-                ref={canvasRef}
-                width={640}
-                height={480}
-                className="absolute inset-0 w-full h-full object-cover transform -scale-x-100 z-10 pointer-events-none"
-              />
-
-              {!gameStarted && (
-                <div className="absolute inset-0 z-20 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-500 flex items-center justify-center mb-6 shadow-xl shadow-amber-500/20 animate-bounce">
-                    <Camera className="w-10 h-10 text-slate-950" />
-                  </div>
-                  <h2 className="text-3xl font-extrabold mb-3 bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-                    مرحباً بك في عالم الحروف بالواقع المعزز
-                  </h2>
-                  <p className="text-slate-300 max-w-md mb-8 leading-relaxed text-sm">
-                    قم بإيماءات يدك أمام الكاميرا للتفاعل مع الكلمات العربية واكتساب النقاط مع الذكاء الاصطناعي!
-                  </p>
-                  <button
-                    onClick={() => setGameStarted(true)}
-                    className="px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 font-bold text-lg shadow-xl shadow-amber-500/25 transition transform hover:scale-105 active:scale-95 flex items-center gap-3"
-                  >
-                    <Play className="w-6 h-6 fill-current" /> تشغيل الكاميرا واللعبة الآن
-                  </button>
-                </div>
-              )}
-
-              {gameStarted && (
-                <>
-                  <div className="absolute top-4 right-4 left-4 z-20 flex items-center justify-between pointer-events-none">
-                    <div className="bg-slate-900/80 backdrop-blur border border-slate-700/60 rounded-2xl p-3 flex items-center gap-3 shadow-lg">
-                      <span className="text-3xl">{currentLevel.emoji}</span>
-                      <div>
-                        <div className="text-xs text-amber-400 font-bold">الحرف والكلمة المطلوبة</div>
-                        <div className="text-xl font-black text-white">{currentLevel.letter} - {currentLevel.word}</div>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900/80 backdrop-blur border border-slate-700/60 rounded-2xl px-4 py-2 flex items-center gap-4 shadow-lg">
-                      <div className="text-center">
-                        <div className="text-xs text-slate-400">النقاط</div>
-                        <div className="text-lg font-bold text-emerald-400">{score}</div>
-                      </div>
-                      <div className="w-px h-8 bg-slate-700" />
-                      <div className="text-center">
-                        <div className="text-xs text-slate-400">السلسلة</div>
-                        <div className="text-lg font-bold text-cyan-400">🔥 {streak}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-4 right-4 z-20 bg-slate-900/85 backdrop-blur border border-amber-500/40 rounded-2xl p-4 max-w-xs shadow-xl">
-                    <div className="text-xs text-amber-400 font-semibold mb-1">الحركة المطلوبة للحل:</div>
-                    <div className="text-lg font-bold text-white mb-2">{currentLevel.gestureName}</div>
-                    <div className="text-xs text-slate-300 flex items-center gap-2 border-t border-slate-800 pt-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span>تم اكتشاف: <strong className="text-cyan-300">{detectedGesture}</strong></span>
-                    </div>
-                  </div>
-
-                  {matchSuccess && (
-                    <div className="absolute inset-0 z-30 bg-emerald-950/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
-                      <div className="bg-emerald-500 text-slate-950 p-4 rounded-full mb-4 shadow-2xl animate-bounce">
-                        <CheckCircle2 className="w-16 h-16" />
-                      </div>
-                      <h3 className="text-4xl font-black text-white mb-2">ممتاز! إجابة صحيحة</h3>
-                      <p className="text-emerald-200 font-bold text-lg">+100 نقطة ⭐</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col gap-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-                <Award className="w-5 h-5 text-amber-400" /> مراحل اللعبة
-              </h3>
-
-              <div className="flex flex-col gap-2">
-                {GAME_LEVELS.map((lvl, index) => {
-                  const isCurrent = index === currentLevelIdx;
-                  return (
-                    <div
-                      key={lvl.id}
-                      className={`p-3.5 rounded-2xl border transition flex items-center justify-between ${
-                        isCurrent
-                          ? 'bg-amber-500/10 border-amber-500/50 text-amber-300'
-                          : 'bg-slate-950/40 border-slate-800/80 text-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{lvl.emoji}</span>
-                        <div>
-                          <div className="font-bold text-sm text-white">{lvl.letter} - {lvl.word}</div>
-                          <div className="text-xs opacity-80">{lvl.gestureName}</div>
-                        </div>
-                      </div>
-                      {isCurrent && <span className="text-xs bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-bold">الحالي</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+      {stage === 'menu' && <main className="max-w-5xl mx-auto px-4 py-10 text-center">
+        <div className="text-6xl mb-4">🎮 🤏 📚</div><h2 className="text-3xl font-black mb-3">Word Catcher — Tangkap Perkataan</h2>
+        <p className="text-slate-300 mb-8">Baca maksud atau lihat gambar. Gerakkan jari telunjuk ke jawapan Arab yang betul, kemudian cubit ibu jari dan telunjuk untuk memilih.</p>
+        <h3 className="text-lg font-bold mb-4">Pilih tahun persekolahan</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+          {[1,2,3,4,5,6].map(n => <button key={n} onClick={() => setYear(n)} className={`rounded-2xl border p-5 text-lg font-bold transition ${year === n ? 'bg-amber-500 text-slate-950 border-amber-300' : 'bg-slate-900 border-slate-700 hover:border-amber-400'}`}>Tahun {n}<span className="block text-xs mt-1 font-normal">{n <= 2 ? 'Kosa kata asas' : n === 3 ? 'Kata kerja' : n === 4 ? 'Frasa mudah' : 'Ayat Bahasa Arab'}</span></button>)}
         </div>
-      </main>
+        <button onClick={begin} className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 px-8 py-4 rounded-2xl font-black text-xl inline-flex items-center gap-3"><Play/> Mula bermain — Tahun {year}</button>
+        <p className="text-slate-400 text-sm mt-5">Alternatif: klik jawapan menggunakan tetikus. 6 soalan setiap tahun · 3 nyawa.</p>
+      </main>}
+      {playing && <main className="max-w-7xl mx-auto p-3 sm:p-5 grid lg:grid-cols-[minmax(0,1fr)_290px] gap-5">
+        <section className="min-w-0">
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="rounded-xl bg-slate-900 p-3 text-center"><Star className="inline text-amber-400" size={18}/> <b>{score}</b><p className="text-xs text-slate-400">Markah</p></div>
+            <div className="rounded-xl bg-slate-900 p-3 text-center"><Heart className="inline text-rose-400" size={18}/> <b>{'❤️'.repeat(lives) || '0'}</b><p className="text-xs text-slate-400">Nyawa</p></div>
+            <div className="rounded-xl bg-slate-900 p-3 text-center"><Clock3 className="inline text-cyan-400" size={18}/> <b>{seconds}s</b><p className="text-xs text-slate-400">Masa</p></div>
+          </div>
+          <div ref={arenaRef} className="relative overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-900 aspect-[4/3] sm:aspect-video">
+            <video ref={videoRef} muted playsInline autoPlay className="absolute inset-0 w-full h-full object-cover -scale-x-100"/>
+            <canvas ref={canvasRef} width={640} height={480} className="absolute inset-0 w-full h-full object-cover -scale-x-100 pointer-events-none opacity-70"/>
+            <div className="absolute inset-0 bg-slate-950/30 pointer-events-none"/>
+            <div className="absolute top-3 left-3 right-3 text-center pointer-events-none"><div className="inline-block rounded-2xl bg-slate-950/85 border border-amber-500/40 p-3 max-w-full"><span className="text-3xl">{item[0]}</span><p className="font-black text-lg sm:text-xl">{item[1]}</p><p className="text-xs text-amber-300">Tangkap jawapan Bahasa Arab yang betul</p></div></div>
+            <div className="absolute top-[37%] left-3 right-3 grid grid-cols-2 gap-3" dir="rtl">
+              {choices.map((choice, i) => <button key={`${index}-${choice}`} ref={el => {optionsRef.current[i] = el;}} onClick={() => pick(choice)} disabled={!!selected} className={`min-h-[70px] sm:min-h-[84px] rounded-2xl border-2 p-2 text-base sm:text-xl font-black shadow-xl backdrop-blur-sm transition break-words ${selected?.choice === choice ? (selected.correct ? 'bg-emerald-500/95 border-emerald-200' : 'bg-rose-500/95 border-rose-200') : selected && choice === item[2] ? 'bg-emerald-600/90 border-emerald-200' : 'bg-slate-950/85 border-cyan-400/60 hover:border-amber-400 hover:bg-slate-800/95'}`}>{choice}</button>)}
+            </div>
+            {cursor && <div className={`absolute z-30 w-8 h-8 rounded-full border-4 pointer-events-none -translate-x-1/2 -translate-y-1/2 shadow-[0_0_18px_#22d3ee] ${cursor.pinch ? 'bg-amber-400/80 border-white scale-125' : 'bg-cyan-400/60 border-white'}`} style={{left:`${cursor.x}%`,top:`${cursor.y}%`}}/>}
+            {selected && <div className="absolute z-40 bottom-14 inset-x-3 flex justify-center pointer-events-none"><div className={`rounded-xl px-5 py-3 font-black text-lg shadow-2xl ${selected.correct ? 'bg-emerald-500 text-slate-950' : 'bg-rose-500 text-white'}`}>{selected.correct ? 'مُمْتَازٌ! Betul! +100 ⭐' : 'Cuba lagi pada soalan seterusnya'}</div></div>}
+            <div className="absolute bottom-2 left-3 right-3 text-xs text-white bg-slate-950/80 rounded-lg px-3 py-2 flex justify-between gap-2"><span>{handVisible ? '🟢 Tangan dikesan' : '⚪ Tunjukkan tangan'}</span><span>{cameraMessage}</span></div>
+          </div>
+        </section>
+        <aside className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
+          <div className="flex justify-between items-center"><h3 className="font-black text-amber-300">Tahun {year}</h3><span className="text-sm text-slate-300">Soalan {index+1}/{bank.length}</span></div>
+          <div className="w-full h-3 rounded-full bg-slate-700 overflow-hidden"><div className="h-full bg-emerald-400" style={{width:`${((index+1)/bank.length)*100}%`}}/></div>
+          <div className="rounded-xl bg-slate-950 p-4"><Hand className="text-cyan-300 mb-2"/><p className="font-bold">Cara bermain</p><p className="text-sm text-slate-300 mt-2">☝️ Halakan telunjuk ke pilihan.</p><p className="text-sm text-slate-300 mt-1">🤏 Cubit ibu jari + telunjuk untuk tangkap.</p><p className="text-sm text-slate-300 mt-1">🖱️ Klik dengan tetikus jika perlu.</p></div>
+          <button onClick={() => {setHint(true); if(sound) speak(item[2]);}} className="w-full rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 p-3 text-amber-200 font-bold">💡 Petunjuk / Dengar jawapan</button>
+          {hint && <p className="text-sm bg-slate-800 p-3 rounded-xl">Jawapan bermula dengan: <b dir="rtl">{item[2].slice(0,2)}...</b></p>}
+          <button onClick={() => setSound(s => !s)} className="w-full rounded-xl bg-slate-800 p-3 flex justify-center gap-2 items-center">{sound ? <Volume2 size={18}/> : <VolumeX size={18}/>} Audio {sound ? 'aktif' : 'dimatikan'}</button>
+          <p className="text-xs text-slate-400">Nota: Kosa kata dan ayat ialah bank soalan contoh. Guru boleh menyelaraskan dengan DSKP sekolah.</p>
+        </aside>
+      </main>}
+      {stage === 'done' && <main className="max-w-xl mx-auto text-center p-8 mt-12 rounded-3xl bg-slate-900 border border-slate-700"><Trophy size={72} className="mx-auto text-amber-400 mb-4"/><h2 className="text-3xl font-black mb-2">Tahniah! 🎉</h2><p className="text-slate-300">Word Catcher Tahun {year} tamat.</p><p className="text-5xl font-black text-emerald-400 my-6">{score} <span className="text-xl">mata</span></p><div className="flex flex-wrap justify-center gap-3"><button onClick={begin} className="bg-emerald-400 text-slate-950 font-bold rounded-xl px-5 py-3 flex items-center gap-2"><RotateCcw size={18}/> Main semula</button><button onClick={returnHome} className="bg-slate-700 rounded-xl px-5 py-3">Pilih tahun lain</button></div></main>}
+      <footer className="text-center text-slate-500 text-xs p-6">Arabic Gesture Quest AR 2.0 · Word Catcher · Prototype PdPc</footer>
     </div>
   );
 }
